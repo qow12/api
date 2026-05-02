@@ -88,7 +88,10 @@ def get_all_bio():
         })
 
     return jsonify(result)
-
+    
+@app.route("/debug-bio")
+def debug_bio():
+    return load_bio()
 # =========================
 # GET SINGLE BIO
 # =========================
