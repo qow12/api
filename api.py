@@ -7,26 +7,34 @@ app = Flask(__name__)
 CORS(app)
 
 # =========================
-# MEMORY CACHE STAFF
+# STAFF CACHE (IN MEMORY)
 # =========================
 STAFF_CACHE = []
 
 # =========================
 # BIO FILE
 # =========================
-BIO_FILE = "bio.json"
+BIO_FILE = os.path.join(os.getcwd(), "bio.json")
 
 
+# =========================
+# LOAD BIO
+# =========================
 def load_bio():
     if not os.path.exists(BIO_FILE):
         return {}
+
     try:
         with open(BIO_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
     except:
         return {}
 
 
+# =========================
+# SAVE BIO
+# =========================
 def save_bio(data):
     with open(BIO_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
@@ -41,17 +49,21 @@ def home():
 
 
 # =========================
-# STAFF UPDATE FROM BOT
+# STAFF UPDATE (FROM BOT)
 # =========================
 @app.route("/staff", methods=["POST"])
 def staff():
     global STAFF_CACHE
-    data = request.json
 
+    data = request.json or {}
     STAFF_CACHE = data.get("data", [])
 
     print("📦 STAFF UPDATED:", len(STAFF_CACHE))
-    return jsonify({"status": "ok", "count": len(STAFF_CACHE)})
+
+    return jsonify({
+        "status": "ok",
+        "count": len(STAFF_CACHE)
+    })
 
 
 # =========================
@@ -60,6 +72,7 @@ def staff():
 @app.route("/staff", methods=["GET"])
 def get_staff():
     bio_data = load_bio()
+
     result = []
 
     for user in STAFF_CACHE:
@@ -72,26 +85,32 @@ def get_staff():
 
 
 # =========================
-# 🔥 GET ALL BIO LIST (INI YANG KAMU MAU)
+# GET ALL BIO
 # =========================
 @app.route("/bio", methods=["GET"])
 def get_all_bio():
     bio_data = load_bio()
 
-    result = []
-
-    for user_id, data in bio_data.items():
-        result.append({
-            "id": user_id,
+    result = [
+        {
+            "id": uid,
             "bio": data.get("bio", ""),
             "updated_at": data.get("updated_at", "")
-        })
+        }
+        for uid, data in bio_data.items()
+    ]
 
     return jsonify(result)
-    
+
+
+# =========================
+# DEBUG BIO RAW FILE
+# =========================
 @app.route("/debug-bio")
 def debug_bio():
-    return load_bio()
+    return jsonify(load_bio())
+
+
 # =========================
 # GET SINGLE BIO
 # =========================
@@ -112,14 +131,18 @@ def get_bio(user_id):
 def set_bio():
     bio_data = load_bio()
 
-    data = request.json
-    user_id = str(data["id"])
-    bio = data["bio"]
+    data = request.json or {}
 
-    if user_id not in bio_data:
-        bio_data[user_id] = {}
+    user_id = str(data.get("id"))
+    bio = data.get("bio", "")
 
-    bio_data[user_id]["bio"] = bio
+    if not user_id:
+        return jsonify({"status": "error", "message": "missing id"}), 400
+
+    bio_data[user_id] = {
+        "bio": bio,
+        "updated_at": data.get("updated_at", "")
+    }
 
     save_bio(bio_data)
 
@@ -127,7 +150,7 @@ def set_bio():
 
 
 # =========================
-# RUN
+# RUN SERVER
 # =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
