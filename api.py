@@ -83,14 +83,11 @@ def get_all_bio():
     for user_id, data in bio_data.items():
         result.append({
             "id": user_id,
-            "bio": data.get("bio", "")
+            "bio": data.get("bio", ""),
+            "updated_at": data.get("updated_at", "")
         })
 
-    return jsonify({
-        "count": len(result),
-        "data": result
-    })
-
+    return jsonify(result)
 
 # =========================
 # GET SINGLE BIO
