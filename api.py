@@ -14,22 +14,34 @@ STAFF_CACHE = []
 # =========================
 # BIO FILE
 # =========================
+BIO_CACHE = {}
 BIO_FILE = "bio.json"
 
 
 def load_bio():
+    global BIO_CACHE
+
     if not os.path.exists(BIO_FILE):
-        return {}
+        BIO_CACHE = {}
+        return BIO_CACHE
+
     try:
         with open(BIO_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            BIO_CACHE = json.load(f)
+            return BIO_CACHE
     except:
-        return {}
+        BIO_CACHE = {}
+        return BIO_CACHE
 
 
-def save_bio(data):
-    with open(BIO_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+def save_bio():
+    global BIO_CACHE
+
+    tmp = BIO_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(BIO_CACHE, f, indent=2)
+
+    os.replace(tmp, BIO_FILE)
 
 
 # =========================
@@ -59,49 +71,48 @@ def staff():
 # =========================
 @app.route("/staff", methods=["GET"])
 def get_staff():
-    bio_data = load_bio()
+    load_bio()
+
     result = []
 
     for user in STAFF_CACHE:
         uid = str(user.get("id"))
 
-        user["bio"] = bio_data.get(uid, {}).get("bio", "No bio available")
+        user["bio"] = BIO_CACHE.get(uid, {}).get("bio", "No bio available")
         result.append(user)
 
     return jsonify(result)
-
 
 # =========================
 # 🔥 GET ALL BIO LIST (INI YANG KAMU MAU)
 # =========================
 @app.route("/bio", methods=["GET"])
 def get_all_bio():
-    bio_data = load_bio()
+    load_bio()
 
-    result = []
-
-    for user_id, data in bio_data.items():
-        result.append({
-            "id": user_id,
+    result = [
+        {
+            "id": uid,
             "bio": data.get("bio", "")
-        })
+        }
+        for uid, data in BIO_CACHE.items()
+    ]
 
     return jsonify({
         "count": len(result),
         "data": result
     })
 
-
 # =========================
 # GET SINGLE BIO
 # =========================
 @app.route("/bio/<user_id>", methods=["GET"])
 def get_bio(user_id):
-    bio_data = load_bio()
+    load_bio()
 
     return jsonify({
         "id": user_id,
-        "bio": bio_data.get(user_id, {}).get("bio", "")
+        "bio": BIO_CACHE.get(user_id, {}).get("bio", "")
     })
 
 
@@ -110,21 +121,20 @@ def get_bio(user_id):
 # =========================
 @app.route("/bio/set", methods=["POST"])
 def set_bio():
-    bio_data = load_bio()
+    load_bio()  # pastikan cache sync
 
     data = request.json
     user_id = str(data["id"])
     bio = data["bio"]
 
-    if user_id not in bio_data:
-        bio_data[user_id] = {}
+    if user_id not in BIO_CACHE:
+        BIO_CACHE[user_id] = {}
 
-    bio_data[user_id]["bio"] = bio
+    BIO_CACHE[user_id]["bio"] = bio
 
-    save_bio(bio_data)
+    save_bio()
 
     return jsonify({"status": "ok"})
-
 
 # =========================
 # RUN
