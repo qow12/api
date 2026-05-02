@@ -12,7 +12,7 @@ CORS(app)
 STAFF_CACHE = []
 
 # =========================
-# BIO FILE (DISCORD INPUT)
+# BIO FILE
 # =========================
 BIO_FILE = "bio.json"
 
@@ -27,8 +27,13 @@ def load_bio():
         return {}
 
 
+def save_bio(data):
+    with open(BIO_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
 # =========================
-# ROUTES
+# HOME
 # =========================
 @app.route("/")
 def home():
@@ -36,7 +41,7 @@ def home():
 
 
 # =========================
-# DISCORD BOT PUSH STAFF DATA
+# STAFF UPDATE FROM BOT
 # =========================
 @app.route("/staff", methods=["POST"])
 def staff():
@@ -50,38 +55,58 @@ def staff():
 
 
 # =========================
-# GET STAFF (FRONTEND)
+# GET STAFF + BIO MERGE
 # =========================
 @app.route("/staff", methods=["GET"])
 def get_staff():
     bio_data = load_bio()
-
-    # merge staff + bio
     result = []
 
     for user in STAFF_CACHE:
         uid = str(user.get("id"))
 
         user["bio"] = bio_data.get(uid, {}).get("bio", "No bio available")
-
         result.append(user)
 
     return jsonify(result)
 
 
 # =========================
-# OPTIONAL: GET SINGLE BIO
+# 🔥 GET ALL BIO LIST (INI YANG KAMU MAU)
+# =========================
+@app.route("/bio", methods=["GET"])
+def get_all_bio():
+    bio_data = load_bio()
+
+    result = []
+
+    for user_id, data in bio_data.items():
+        result.append({
+            "id": user_id,
+            "bio": data.get("bio", "")
+        })
+
+    return jsonify({
+        "count": len(result),
+        "data": result
+    })
+
+
+# =========================
+# GET SINGLE BIO
 # =========================
 @app.route("/bio/<user_id>", methods=["GET"])
 def get_bio(user_id):
     bio_data = load_bio()
+
     return jsonify({
+        "id": user_id,
         "bio": bio_data.get(user_id, {}).get("bio", "")
     })
 
 
 # =========================
-# OPTIONAL: UPDATE BIO (DISCORD BOT ONLY)
+# SET BIO
 # =========================
 @app.route("/bio/set", methods=["POST"])
 def set_bio():
@@ -96,14 +121,13 @@ def set_bio():
 
     bio_data[user_id]["bio"] = bio
 
-    with open(BIO_FILE, "w", encoding="utf-8") as f:
-        json.dump(bio_data, f, indent=2)
+    save_bio(bio_data)
 
     return jsonify({"status": "ok"})
 
 
 # =========================
-# RUN (RAILWAY SUPPORT)
+# RUN
 # =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
