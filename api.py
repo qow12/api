@@ -195,6 +195,69 @@ def get_role(role_id):
     return jsonify(role)
 
 # =========================
+# MEMORY CACHE DONATUR
+# =========================
+DONATUR_CACHE = []
+
+
+# =========================
+# DONATUR UPDATE FROM BOT
+# =========================
+@app.route("/donatur", methods=["POST"])
+def update_donatur():
+
+    global DONATUR_CACHE
+
+    data = request.json
+
+    DONATUR_CACHE = data.get("data", [])
+
+    print(
+        "💰 DONATUR UPDATED:",
+        len(DONATUR_CACHE)
+    )
+
+    return jsonify({
+        "status": "ok",
+        "count": len(DONATUR_CACHE)
+    })
+
+
+# =========================
+# GET ALL DONATUR
+# =========================
+@app.route("/donatur", methods=["GET"])
+def get_donatur():
+
+    return jsonify({
+        "count": len(DONATUR_CACHE),
+        "data": DONATUR_CACHE
+    })
+
+
+# =========================
+# GET SINGLE DONATUR
+# =========================
+@app.route("/donatur/<user_id>", methods=["GET"])
+def get_single_donatur(user_id):
+
+    donatur = next(
+        (
+            user for user in DONATUR_CACHE
+            if str(user.get("id")) == str(user_id)
+        ),
+        None
+    )
+
+    if not donatur:
+        return jsonify({
+            "error": "Donatur not found"
+        }), 404
+
+
+    return jsonify(donatur)
+
+# =========================
 # RUN
 # =========================
 if __name__ == "__main__":
